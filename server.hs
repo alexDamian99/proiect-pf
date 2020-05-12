@@ -3,7 +3,7 @@ import Network.Socket
 import Control.Concurrent
 
 main :: IO ()
-main = do --withSocketsDo is used for windows ?
+main = do 
     sock <- socket AF_INET Stream 0 --create tcp socket
     setSocketOption sock ReuseAddr 1 -- reuse socket
     bind sock (SockAddrInet 2020 0) -- bind the address and port 2020
@@ -21,6 +21,16 @@ clientThread :: Socket -> IO ()
 clientThread sock = do
     socketHandler <- socketToHandle sock ReadWriteMode
     hSetBuffering socketHandler NoBuffering --remove buffering
-    hPutStrLn socketHandler "Hello!"
-    hClose socketHandler
+
+    hPutStrLn socketHandler "Hello client! Please tell me your name"
+    name <- (hGetLine socketHandler)
+
+    hPutStrLn socketHandler ("Hello " ++ name ++ ". Now you can exit or create/join a room")
+    response <- (hGetLine socketHandler)
+    case response of
+        "exit" -> do 
+                hPutStrLn socketHandler "close"
+                hClose socketHandler
+        _ -> hClose socketHandler
+    
 
