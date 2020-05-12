@@ -37,5 +37,3 @@ msgSender socketHandler = do
     case server_response of
         "close" -> putStrLn "Closing connection. Bye" 
         _ -> msgSender socketHandler
---   B8.putStrLn rMsg
---   if msg == B8.pack "q" then putStrLn "Disconnected!" else msgSender sock
