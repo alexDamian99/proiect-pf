@@ -2,6 +2,7 @@ import Network.Socket hiding (send, sendTo, recv, recvFrom)
 -- import qualified Data.ByteString.Char8 as B8
 import Control.Concurrent
 import System.IO
+import Control.Monad.Fix (fix)
 
 main :: IO ()
 main = client "127.0.0.1" 2020
@@ -18,22 +19,36 @@ client host port = do
 
 msgSender :: Handle -> IO ()
 msgSender socketHandler = do
-    
     hSetBuffering socketHandler NoBuffering
-    server_response <- (hGetLine socketHandler)
-    putStrLn server_response
 
-    msg <- getLine
-
-    hPutStrLn socketHandler msg
-    server_response <- (hGetLine socketHandler)
+    server_response <- (hGetLine socketHandler) --get the hello from server
     putStrLn server_response
 
     msg <- getLine
     hPutStrLn socketHandler msg
+    server_response <- (hGetLine socketHandler)
+    putStrLn server_response
 
+    msg <- getLine  --citeste optiunea
+    hPutStrLn socketHandler msg
     server_response <- (hGetLine socketHandler)
 
+    
+    
     case server_response of
-        "close" -> putStrLn "Closing connection. Bye" 
-        _ -> msgSender socketHandler
+        "close" -> do
+                putStrLn "Closing connection. Bye"
+        _ -> do
+            listeningThread <- forkIO $ fix $ \loop -> do
+                                    msg <- hGetLine socketHandler
+                                    putStrLn msg
+                                    loop
+            fix $ \loop -> do
+                msg <- getLine
+                hPutStrLn socketHandler (msg ++ " ")
+                case msg of
+                    "exit" -> do
+                        putStrLn "Leaving chat. Bye!"
+                    _ -> loop
+            
+            killThread listeningThread
