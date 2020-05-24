@@ -24,31 +24,54 @@ msgSender socketHandler = do
     server_response <- (hGetLine socketHandler) --get the hello from server
     putStrLn server_response
 
-    msg <- getLine
+    msg <- getLine --get name
     hPutStrLn socketHandler msg
     server_response <- (hGetLine socketHandler)
     putStrLn server_response
 
-    msg <- getLine  --citeste optiunea
-    hPutStrLn socketHandler msg
-    server_response <- (hGetLine socketHandler)
-
     
-    
-    case server_response of
-        "close" -> do
+    fix $ \main_loop -> do 
+        putStrLn "Enter exit/create/join"
+        msg <- getLine  --citeste optiunea
+        hPutStrLn socketHandler msg
+        server_response <- (hGetLine socketHandler)
+        case server_response of
+            "close" -> do
                 putStrLn "Closing connection. Bye"
-        _ -> do
-            listeningThread <- forkIO $ fix $ \loop -> do
-                                    msg <- hGetLine socketHandler
-                                    putStrLn msg
-                                    loop
-            fix $ \loop -> do
+            "created" -> do
+                server_response <- (hGetLine socketHandler)
+                putStrLn ("Created room " ++ server_response)
+                communication socketHandler
+            "room?" -> do
+                putStrLn "Enter a room id (number):"
                 msg <- getLine
-                hPutStrLn socketHandler (msg ++ " ")
-                case msg of
-                    "exit" -> do
-                        putStrLn "Leaving chat. Bye!"
-                    _ -> loop
-            
-            killThread listeningThread
+                hPutStrLn socketHandler msg
+                server_response <- (hGetLine socketHandler)
+                case server_response of 
+                    "joined" -> do
+                        roomNo <- (hGetLine socketHandler)
+                        putStrLn ("Joined room " ++ roomNo)
+                        communication socketHandler
+                    "err" -> do
+                        server_response <- (hGetLine socketHandler)
+                        putStrLn ("Error " ++ server_response)
+                        main_loop
+                
+
+
+
+communication :: Handle -> IO ()
+communication socketHandler = do
+    listeningThread <- forkIO $ fix $ \loop -> do
+                            msg <- hGetLine socketHandler
+                            putStrLn msg
+                            loop
+    fix $ \loop -> do
+        msg <- getLine
+        hPutStrLn socketHandler (msg ++ " ")
+        case msg of
+            "exit" -> do
+                putStrLn "Leaving chat. Bye!"
+            _ -> loop
+    
+    killThread listeningThread
