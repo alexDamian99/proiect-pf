@@ -61,7 +61,6 @@ clientThread sock channel totalRooms = do
                     rooms <- atomically $ readTVar totalRooms
                     hPutStrLn socketHandler "room?"
                     roomNo <- (hGetLine socketHandler)
-                    putStrLn (show rooms)
                     if((all isDigit roomNo) && ((read roomNo :: Int) <= (fromIntegral rooms))) then do
                             hPutStrLn socketHandler "joined"
                             hPutStrLn socketHandler roomNo
@@ -71,10 +70,10 @@ clientThread sock channel totalRooms = do
                         hPutStrLn socketHandler "The room id must be a number or the id of a created room"
                         loop
             _ -> do
-                putStrLn ("[Client " ++ name ++ "]" ++ response)
                 hPutStrLn socketHandler "err"
                 hPutStrLn socketHandler "Invalid command"
                 loop
+    close sock
         
 
 communication :: Handle -> Chan Msg -> String -> Integer -> IO ()
@@ -84,7 +83,9 @@ communication socketHandler channel name roomNo = do
         (senderName, roomNumber, msg) <- readChan communicationChannel
         if (senderName /= name && roomNumber == roomNo) then do
             case msg of
-                " left" -> hPutStrLn socketHandler (senderName ++ " left the conversation.")
+                " left" -> do 
+                    hPutStrLn socketHandler (senderName ++ " left the conversation.")
+                    loop
                 "join" -> do
                     hPutStrLn socketHandler (senderName ++ " joined the conversation.")
                     loop
@@ -97,11 +98,12 @@ communication socketHandler channel name roomNo = do
     writeChan channel (name, roomNo, "join")
     fix $ \loop -> do
         message <- fmap init (hGetLine socketHandler)
-        putStrLn ("[" ++ name ++ "] " ++ message)
+        putStrLn ("[" ++ name ++ " " ++ (show roomNo) ++ "] " ++ message)
         case message of
             "exit" -> do
-                    writeChan channel (name, roomNo, " left")
+                writeChan channel (name, roomNo, " left")
             _ -> do
                 writeChan channel (name, roomNo, message) --trimite mesajul tuturor
                 loop
     killThread readingThread
+    putStrLn ("[Client " ++ name ++ "] Closed connection to client")

@@ -56,10 +56,11 @@ msgSender socketHandler = do
                         server_response <- (hGetLine socketHandler)
                         putStrLn ("Error " ++ server_response)
                         main_loop
+            "err" -> do
+                server_response <- (hGetLine socketHandler)
+                putStrLn ("Error " ++ server_response)
+                main_loop 
                 
-
-
-
 communication :: Handle -> IO ()
 communication socketHandler = do
     listeningThread <- forkIO $ fix $ \loop -> do
